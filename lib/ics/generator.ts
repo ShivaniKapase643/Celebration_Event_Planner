@@ -10,21 +10,23 @@ export function buildIcsFile({
   description: string;
 }): string {
   const start = new Date(date);
+  if (Number.isNaN(start.getTime())) throw new Error('Invalid calendar event date');
   const end = new Date(start.getTime() + 60 * 60 * 1000);
   const formatDate = (value: Date) => value.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+  const escapeText = (value: string) => value.replace(/\\/g, '\\\\').replace(/\r?\n/g, '\\n').replace(/,/g, '\\,').replace(/;/g, '\\;');
 
   return [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
     'PRODID:-//Celebrate AI//Planner//EN',
     'BEGIN:VEVENT',
-    `UID:${title.toLowerCase().replace(/\s+/g, '-')}-${start.getTime()}`,
+    `UID:${start.getTime()}-${escapeText(title)}@celebrate-ai`,
     `DTSTAMP:${formatDate(new Date())}`,
     `DTSTART:${formatDate(start)}`,
     `DTEND:${formatDate(end)}`,
-    `SUMMARY:${title}`,
-    `DESCRIPTION:${description}`,
-    `LOCATION:${location}`,
+    `SUMMARY:${escapeText(title)}`,
+    `DESCRIPTION:${escapeText(description)}`,
+    `LOCATION:${escapeText(location)}`,
     'END:VEVENT',
     'END:VCALENDAR'
   ].join('\r\n');

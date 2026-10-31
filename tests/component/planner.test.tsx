@@ -44,4 +44,25 @@ describe('planner component', () => {
     fireEvent.click(screen.getByRole('button', { name: /add guest/i }));
     expect(await screen.findByText('Nisha')).toBeInTheDocument();
   });
+
+  it('supports task creation and removal', async () => {
+    window.localStorage.setItem('celebrate-ai-plan', JSON.stringify(samplePlan));
+    render(<PlannerPage />);
+    fireEvent.click(await screen.findByRole('tab', { name: /timeline/i }));
+    fireEvent.change(screen.getByRole('textbox', { name: /new task/i }), { target: { value: 'Book sound system' } });
+    fireEvent.click(screen.getByRole('button', { name: /add task/i }));
+    expect(await screen.findByText('Book sound system')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /remove book sound system/i }));
+    await waitFor(() => expect(screen.queryByText('Book sound system')).not.toBeInTheDocument());
+  });
+
+  it('filters guests by RSVP', async () => {
+    window.localStorage.setItem('celebrate-ai-plan', JSON.stringify(samplePlan));
+    window.localStorage.setItem('celebrate-ai-guests', JSON.stringify([{ id: 'a', name: 'Asha', rsvp: 'yes' }, { id: 'b', name: 'Dev', rsvp: 'no' }]));
+    render(<PlannerPage />);
+    fireEvent.click(await screen.findByRole('tab', { name: /guests/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^yes$/i }));
+    expect(screen.getByText('Asha')).toBeInTheDocument();
+    expect(screen.queryByText('Dev')).not.toBeInTheDocument();
+  });
 });

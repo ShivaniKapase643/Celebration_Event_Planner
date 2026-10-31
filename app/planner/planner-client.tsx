@@ -6,6 +6,7 @@ import type { EventInput, EventPlan, GuestEntry, OutputLanguage, RSVPStatus } fr
 import { Badge, Button, Card, CardContent, Checkbox, ChipToggle, EmptyState, Input, ProgressBar, Select, Tabs, Textarea, ThemeToggle, ToastViewport } from '@/components/ui';
 import { eventInputSchema, eventPlanSchema } from '@/lib/validation/schemas';
 import { calculateBudgetBreakdown } from '@/lib/budget/allocation';
+import { buildIcsFile } from '@/lib/ics/generator';
 
 
 const futureDate = (offset = 30) => {
@@ -242,11 +243,18 @@ export default function PlannerPage() {
   const [guests, setGuests] = useState<GuestEntry[]>(defaultGuests);
   const [newGuest, setNewGuest] = useState('');
   const [savedStatus, setSavedStatus] = useState('Saved');
+  const [actualCosts, setActualCosts] = useState<Record<string, number>>({});
+  const [taskTitle, setTaskTitle] = useState('');
+  const [isDemoMode, setIsDemoMode] = useState(true);
+  const [guestFilter, setGuestFilter] = useState<'all' | RSVPStatus>('all');
+  const [actualCostsPlanId, setActualCostsPlanId] = useState<string | null>(null);
 
   useEffect(() => {
     const savedPlan = window.localStorage.getItem('celebrate-ai-plan');
     const savedForm = window.localStorage.getItem('celebrate-ai-form');
     const savedList = window.localStorage.getItem('celebrate-ai-events');
+    const savedGuests = window.localStorage.getItem('celebrate-ai-guests');
+    const savedCosts = window.localStorage.getItem('celebrate-ai-costs');
 
     if (savedPlan) {
       try {
@@ -272,6 +280,8 @@ export default function PlannerPage() {
         setSavedEvents([]);
       }
     }
+    if (savedGuests) { try { setGuests(JSON.parse(savedGuests)); } catch { setGuests([]); } }
+    if (savedCosts) { try { const costs = JSON.parse(savedCosts) as { planId?: string; values?: Record<string, number> }; setActualCosts(costs.values ?? {}); setActualCostsPlanId(costs.planId ?? null); } catch { setActualCosts({}); } }
   }, []);
 
   useEffect(() => {
@@ -293,6 +303,9 @@ export default function PlannerPage() {
   useEffect(() => {
     window.localStorage.setItem('celebrate-ai-events', JSON.stringify(savedEvents));
   }, [savedEvents]);
+
+  useEffect(() => { window.localStorage.setItem('celebrate-ai-guests', JSON.stringify(guests)); }, [guests]);
+  useEffect(() => { window.localStorage.setItem('celebrate-ai-costs', JSON.stringify({ planId: plan?.planId ?? actualCostsPlanId, values: actualCosts })); }, [actualCosts, plan?.planId, actualCostsPlanId]);
 
   useEffect(() => {
     if (!toast) return;
@@ -386,7 +399,8 @@ export default function PlannerPage() {
       if (!validatedPlan.success) throw new Error('The planner returned an invalid result. Please try again.');
       const generatedPlan = validatedPlan.data;
       setPlan(generatedPlan);
-      setGuests(defaultGuests);
+      setIsDemoMode(Boolean(data.demoMode));
+      if (actualCostsPlanId !== generatedPlan.planId) { setActualCosts({}); setActualCostsPlanId(generatedPlan.planId); }
       setToast(data.demoMode ? 'Demo plan generated' : 'Plan generated');
     } catch (submissionError) {
       setError(submissionError instanceof Error ? `${submissionError.message}. Please try again.` : 'Unable to generate your plan. Please try again.');
@@ -404,6 +418,60 @@ export default function PlannerPage() {
         timeline: current.sections.timeline.map((task) => task.id === taskId ? { ...task, done: !task.done } : task)
       }
     } : current);
+  };
+
+  const removeTask = (taskId: string) => setPlan((current) => current ? { ...current, sections: { ...current.sections, timeline: current.sections.timeline.filter((task) => task.id !== taskId) } } : current);
+
+  const addTask = () => {
+    const title = taskTitle.trim();
+    if (!title) return;
+    setPlan((current) => current ? { ...current, sections: { ...current.sections, timeline: [...current.sections.timeline, { id: crypto.randomUUID(), title, deadline: 'Custom task', priority: 'medium', category: 'Personal', done: false }] } } : current);
+    setTaskTitle('');
+  };
+
+  const downloadFile = (name: string, content: string, type: string) => {
+    const url = URL.createObjectURL(new Blob([content], { type }));
+    const anchor = document.createElement('a'); anchor.href = url; anchor.download = name; anchor.click(); URL.revokeObjectURL(url);
+  };
+
+  const exportPlan = () => {
+    if (!plan) return;
+    downloadFile(`${plan.title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-plan.json`, JSON.stringify({ ...plan, guests, actualCosts }, null, 2), 'application/json');
+    setToast('Plan exported as JSON');
+  };
+
+  const exportCalendar = () => {
+    if (!plan) return;
+    const time = plan.eventTime ?? '18:00';
+    const ics = buildIcsFile({ title: plan.title, date: `${plan.date}T${time}:00`, location: plan.city, description: `${plan.summary} Theme: ${plan.theme}` });
+    downloadFile(`${plan.title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.ics`, ics, 'text/calendar');
+    setToast('Calendar event exported');
+  };
+
+  const exportGuests = () => {
+    const csv = ['name,rsvp', ...guests.map((guest) => `"${guest.name.replace(/"/g, '""')}",${guest.rsvp}`)].join('\r\n');
+    downloadFile('celebrate-ai-guests.csv', `\uFEFF${csv}`, 'text/csv;charset=utf-8');
+    setToast('Guest list exported as CSV');
+  };
+
+  const importGuests = async (file?: File) => {
+    if (!file) return;
+    if (file.size > 1_000_000) { setToast('CSV must be smaller than 1 MB'); return; }
+    const text = await file.text();
+    const rows = text.split(/\r?\n/).slice(1).filter((row) => row.trim());
+    const imported: GuestEntry[] = rows.map((row) => {
+      const match = row.match(/^\s*(?:"((?:""|[^"])*)"|([^,]*))\s*(?:,\s*([^,]*))?/);
+      const rawName = match?.[1]?.replace(/""/g, '"') ?? match?.[2] ?? '';
+      const rawRsvp = match?.[3] ?? '';
+      const name = rawName.trim().slice(0, 100);
+      const rsvp = (['yes', 'no', 'maybe'].includes(rawRsvp.trim().toLowerCase()) ? rawRsvp.trim().toLowerCase() : 'maybe') as RSVPStatus;
+      return { id: crypto.randomUUID(), name, rsvp };
+    }).filter((guest) => guest.name);
+    setGuests((current) => {
+      const accepted = imported.slice(0, Math.max(0, 2000 - current.length));
+      setToast(`${accepted.length} guests imported${accepted.length < imported.length ? ' (2,000 guest limit reached)' : ''}`);
+      return [...current, ...accepted];
+    });
   };
 
   const regenerateSection = (section: 'timeline' | 'budget' | 'menu' | 'decor' | 'invitation' | 'contingency') => {
@@ -456,7 +524,7 @@ export default function PlannerPage() {
             </div>
 
             <div className="flex items-center gap-3">
-              <Badge className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-300">Demo mode</Badge>
+              <Badge className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-300">{isDemoMode ? 'Demo suggestions' : 'AI generated'}</Badge>
               <ThemeToggle />
             </div>
           </div>
@@ -603,6 +671,8 @@ export default function PlannerPage() {
                         <Badge>{countdown} days to go</Badge>
                         <Button variant="secondary" size="sm" onClick={() => copyToClipboard(plan.sections.invitation.body, 'Copied')}>Copy invite</Button>
                         <Button variant="ghost" size="sm" onClick={() => copyToClipboard(plan.sections.invitation.toast, 'Copied')}>Copy speech</Button>
+                        <Button variant="secondary" size="sm" onClick={exportPlan}>Export plan</Button>
+                        <Button variant="secondary" size="sm" onClick={exportCalendar}>Add to calendar</Button>
                       </>
                     ) : null}
                   </div>
@@ -669,6 +739,7 @@ export default function PlannerPage() {
                         <h3 className="text-xl font-semibold">Timeline & Tasks</h3>
                         <Button type="button" variant="secondary" size="sm" onClick={() => regenerateSection('timeline')} aria-label="Regenerate timeline">↻ Regenerate</Button>
                       </div>
+                      <div className="mb-4 flex gap-2"><Input aria-label="New task" placeholder="Add a task" value={taskTitle} onChange={(e) => setTaskTitle(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addTask(); } }} /><Button type="button" variant="secondary" onClick={addTask}>Add task</Button></div>
                       <div className="space-y-3">
                         {plan.sections.timeline.map((task) => (
                           <div key={task.id} className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-4 md:flex-row md:items-center md:justify-between">
@@ -682,6 +753,7 @@ export default function PlannerPage() {
                             <div className="flex items-center gap-2">
                               <Badge className={task.priority === 'high' ? 'bg-rose-500/10 text-rose-600' : task.priority === 'medium' ? 'bg-amber-500/15 text-amber-600' : 'bg-emerald-500/10 text-emerald-600'}>{task.priority}</Badge>
                               <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-foreground">{task.deadline}</span>
+                              <Button type="button" variant="ghost" size="sm" aria-label={`Remove ${task.title}`} onClick={() => removeTask(task.id)}>Remove</Button>
                             </div>
                           </div>
                         ))}
@@ -699,7 +771,7 @@ export default function PlannerPage() {
                           <div className="relative flex h-32 w-32 items-center justify-center rounded-full" style={{ background: donutGradient }}>
                             <div className="flex h-20 w-20 items-center justify-center rounded-full bg-card text-center shadow-inner">
                               <div>
-                                <p className="text-xl font-bold">{budgetUsed}%</p>
+                                <p className="text-xl font-bold">{Math.min(100, Math.round((Object.values(actualCosts).reduce((sum, cost) => sum + cost, 0) / (plan.budget || 1)) * 100))}%</p>
                                 <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">used</p>
                               </div>
                             </div>
@@ -729,16 +801,14 @@ export default function PlannerPage() {
                                 <tr key={label} className="border-t border-border">
                                   <td className="py-3 pr-4 font-medium capitalize">{label}</td>
                                   <td className="py-3 pr-4">{formatCurrency(item.amount)}</td>
-                                  <td className="py-3 pr-4"><Input value={item.amount} readOnly className="min-w-[100px]" /></td>
-                                  <td className="py-3 pr-4 text-emerald-600">{formatCurrency(item.amount)}</td>
+                                  <td className="py-3 pr-4"><Input aria-label={`${label} actual cost`} type="number" min={0} value={actualCosts[label] ?? 0} onChange={(e) => setActualCosts((current) => ({ ...current, [label]: Math.max(0, Number(e.target.value)) }))} className="min-w-[100px]" /></td>
+                                  <td className={`py-3 pr-4 ${(item.amount - (actualCosts[label] ?? 0)) < 0 ? 'text-rose-600' : 'text-emerald-600'}`}>{formatCurrency(item.amount - (actualCosts[label] ?? 0))}</td>
                                 </tr>
                               ))}
                             </tbody>
                           </table>
                         </div>
-                        <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">
-                          ⚠️ Over budget risk: keep an eye on venue and food spend as they are already consuming 62% of your plan.
-                        </div>
+                        {Object.entries(actualCosts).some(([category, amount]) => amount > (plan.sections.budget[category as keyof typeof plan.sections.budget]?.amount ?? 0)) ? <div role="status" className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">Actual costs have exceeded a planned category amount.</div> : null}
                       </CardContent>
                     </Card>
                   </div>
@@ -809,12 +879,12 @@ export default function PlannerPage() {
                 {activeTab === 'guests' ? (
                   <Card>
                     <CardContent className="p-5">
-                      <div className="mb-4 flex items-center justify-between gap-3">
+                      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                         <div>
                           <h3 className="text-xl font-semibold">Guests</h3>
                           <p className="text-sm text-muted-foreground">Confirmed {guestSummary.yes} of {guests.length} planned guests</p>
                         </div>
-                        <Button type="button" variant="secondary" size="sm" onClick={() => { setGuests(defaultGuests); setToast('Guest list reset'); }} aria-label="Reset guest list">↻ Reset guests</Button>
+                        <div className="flex flex-wrap gap-2"><Button type="button" variant="secondary" size="sm" onClick={exportGuests}>Export CSV</Button><label className="inline-flex cursor-pointer items-center rounded-xl bg-secondary px-3 py-2 text-sm font-medium text-secondary-foreground">Import CSV<input className="sr-only" type="file" accept=".csv,text/csv" aria-label="Import guest CSV" onChange={(event) => { void importGuests(event.target.files?.[0]); event.currentTarget.value = ''; }} /></label><Button type="button" variant="ghost" size="sm" onClick={() => { setGuests([]); setToast('Guest list cleared'); }} aria-label="Clear guest list">Clear</Button></div>
                       </div>
 
                       <div className="mb-5 grid gap-3 sm:grid-cols-3">
@@ -823,11 +893,15 @@ export default function PlannerPage() {
                         <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-rose-700"><p className="text-xs uppercase tracking-[0.2em]">No</p><p className="mt-2 text-2xl font-bold">{guestSummary.no}</p></div>
                       </div>
 
-                      <div className="mb-4 flex items-center gap-2">
-                        <Input value={newGuest} onChange={(e) => setNewGuest(e.target.value)} placeholder="Guest name" className="max-w-md" />
+                      <div className="mb-4 flex flex-wrap items-center gap-2" aria-label="Filter guests by RSVP">
+                        {(['all', 'yes', 'maybe', 'no'] as const).map((status) => <Button key={status} type="button" size="sm" variant={guestFilter === status ? 'primary' : 'secondary'} aria-pressed={guestFilter === status} onClick={() => setGuestFilter(status)}>{status === 'all' ? 'All guests' : status}</Button>)}
+                      </div>
+
+                      <div className="mb-4 flex flex-wrap items-center gap-2">
+                        <Input aria-label="Guest name" value={newGuest} onChange={(e) => setNewGuest(e.target.value)} placeholder="Guest name" className="max-w-md" onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); if (!newGuest.trim()) return; setGuests((current) => [...current, { id: crypto.randomUUID(), name: newGuest.trim().slice(0, 100), rsvp: 'maybe' }]); setNewGuest(''); } }} />
                         <Button type="button" variant="secondary" onClick={() => {
                           if (!newGuest.trim()) return;
-                          setGuests((current) => [...current, { id: crypto.randomUUID(), name: newGuest.trim(), rsvp: 'maybe' }]);
+                          setGuests((current) => current.length >= 2000 ? current : [...current, { id: crypto.randomUUID(), name: newGuest.trim().slice(0, 100), rsvp: 'maybe' }]);
                           setNewGuest('');
                         }}>Add guest</Button>
                       </div>
@@ -836,13 +910,13 @@ export default function PlannerPage() {
                         <table className="min-w-full text-left text-sm">
                           <thead>
                             <tr className="text-muted-foreground">
-                              <th className="pb-2 font-medium">Name</th>
-                              <th className="pb-2 font-medium">RSVP</th>
-                              <th className="pb-2 font-medium">Actions</th>
+                              <th scope="col" className="pb-2 font-medium">Name</th>
+                              <th scope="col" className="pb-2 font-medium">RSVP</th>
+                              <th scope="col" className="pb-2 font-medium">Actions</th>
                             </tr>
                           </thead>
                           <tbody>
-                            {guests.map((guest) => (
+                            {guests.filter((guest) => guestFilter === 'all' || guest.rsvp === guestFilter).map((guest) => (
                               <tr key={guest.id} className="border-t border-border">
                                 <td className="py-3 pr-4 font-medium">{guest.name}</td>
                                 <td className="py-3 pr-4">
