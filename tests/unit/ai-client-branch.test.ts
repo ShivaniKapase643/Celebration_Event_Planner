@@ -65,6 +65,26 @@ describe('AI client branches', () => {
     expect(result.plan.title).toBe('Annual event');
   });
 
+  it('rejects malformed Gemini JSON instead of returning an unvalidated plan', async () => {
+    mockGeminiGenerateContent.mockResolvedValueOnce({ text: 'not JSON' });
+
+    await expect(generatePlan({
+      eventType: 'birthday', title: 'Birthday bash', date: '2038-06-10', guestCount: 80,
+      budget: 150000, city: 'Mumbai', theme: 'Sunset party', dietaryNeeds: [],
+      accessibilityNeeds: 'Ramp access', language: 'en'
+    })).rejects.toBeInstanceOf(SyntaxError);
+  });
+
+  it('rejects Gemini JSON that does not match the event plan schema', async () => {
+    mockGeminiGenerateContent.mockResolvedValueOnce({ text: '{}' });
+
+    await expect(generatePlan({
+      eventType: 'birthday', title: 'Birthday bash', date: '2038-06-10', guestCount: 80,
+      budget: 150000, city: 'Mumbai', theme: 'Sunset party', dietaryNeeds: [],
+      accessibilityNeeds: 'Ramp access', language: 'en'
+    })).rejects.toHaveProperty('name', 'ZodError');
+  });
+
   it('falls back to the default Gemini model when GEMINI_MODEL is unset', async () => {
     delete process.env.GEMINI_MODEL;
 

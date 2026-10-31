@@ -59,4 +59,21 @@ describe('plan API route', () => {
     expect(response.status).toBe(400);
     await expect(response.json()).resolves.toEqual({ error: 'Invalid JSON' });
   });
+
+  it('hides AI provider errors behind a generic server response', async () => {
+    mockGeneratePlan.mockRejectedValueOnce(new Error('provider response contained sensitive details'));
+    const request = new NextRequest('http://localhost/api/plan', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        eventType: 'birthday', title: 'Provider failure scenario', date: '2035-05-16', guestCount: 80,
+        budget: 250000, city: 'Pune', theme: 'Garden', dietaryNeeds: ['vegetarian'],
+        accessibilityNeeds: 'Ramp access', language: 'en'
+      })
+    });
+
+    const response = await createPlan(request);
+    expect(response.status).toBe(500);
+    await expect(response.json()).resolves.toEqual({ error: 'Unable to generate plan right now' });
+  });
 });

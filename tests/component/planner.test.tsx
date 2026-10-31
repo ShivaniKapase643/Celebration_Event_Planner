@@ -2,10 +2,18 @@ import { render, screen, fireEvent, waitFor, within } from '@testing-library/rea
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import PlannerPage from '@/app/planner/page';
 import { samplePlan } from '@/lib/ai/sample-plan';
+import { axe } from 'vitest-axe';
 
 describe('planner component', () => {
   beforeEach(() => {
     window.localStorage.clear();
+  });
+
+  it('has no detectable accessibility violations in the initial planner view', async () => {
+    const { container } = render(<PlannerPage />);
+    // jsdom has no layout engine, so axe's contrast heuristic cannot be evaluated here.
+    const results = await axe(container, { rules: { 'color-contrast': { enabled: false } } });
+    expect(results.violations).toEqual([]);
   });
 
   it('updates all dietary options and keeps none exclusive', async () => {
