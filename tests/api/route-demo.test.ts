@@ -43,6 +43,7 @@ beforeEach(() => {
 });
 
 import { POST as createPlan } from '@/app/api/plan/route';
+import { POST as regeneratePlan } from '@/app/api/plan/section/route';
 
 describe('demo API route', () => {
   it('handles a valid plan request in demo mode', async () => {
@@ -65,5 +66,30 @@ describe('demo API route', () => {
 
     const response = await createPlan(request);
     expect(response.status).toBe(200);
+  });
+
+  it('rejects oversized regeneration requests before parsing JSON', async () => {
+    mockGeneratePlan.mockClear();
+    const request = new NextRequest('http://localhost/api/plan/section', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'content-length': '16385' },
+      body: '{}'
+    });
+
+    const response = await regeneratePlan(request);
+    expect(response.status).toBe(413);
+    expect(mockGeneratePlan).not.toHaveBeenCalled();
+  });
+
+  it('returns 400 for malformed JSON on the regeneration endpoint', async () => {
+    const request = new NextRequest('http://localhost/api/plan/section', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: '{invalid'
+    });
+
+    const response = await regeneratePlan(request);
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toEqual({ error: 'Invalid JSON' });
   });
 });

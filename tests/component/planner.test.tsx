@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import PlannerPage from '@/app/planner/page';
 import { samplePlan } from '@/lib/ai/sample-plan';
@@ -61,7 +61,8 @@ describe('planner component', () => {
     window.localStorage.setItem('celebrate-ai-guests', JSON.stringify([{ id: 'a', name: 'Asha', rsvp: 'yes' }, { id: 'b', name: 'Dev', rsvp: 'no' }]));
     render(<PlannerPage />);
     fireEvent.click(await screen.findByRole('tab', { name: /guests/i }));
-    fireEvent.click(screen.getByRole('button', { name: /^yes$/i }));
+    const filters = screen.getByRole('group', { name: /filter guests by rsvp/i });
+    fireEvent.click(within(filters).getByRole('button', { name: /^yes$/i }));
     expect(screen.getByText('Asha')).toBeInTheDocument();
     expect(screen.queryByText('Dev')).not.toBeInTheDocument();
   });

@@ -8,8 +8,8 @@ const features = [
   { title: 'AI plan builder', text: 'Turn a short event brief into a structured plan with timeline, budget and backup ideas.', accent: 'from-violet-500 to-indigo-500' },
   { title: 'Budget clarity', text: 'Track spend across venue, food, decor and staffing without losing control of the budget.', accent: 'from-amber-400 to-orange-500' },
   { title: 'Guest RSVP flow', text: 'Keep chatty family lists organized with yes/maybe/no tracking and live confirmations.', accent: 'from-rose-400 to-pink-500' },
-  { title: 'Checklist + exports', text: 'Move from planning to execution with task checklists and PDF or ICS export options.', accent: 'from-emerald-400 to-teal-500' },
-  { title: 'Multilingual output', text: 'Generate plans in English, Hindi or Marathi for a genuinely inclusive experience.', accent: 'from-cyan-400 to-blue-500' },
+  { title: 'Checklist + exports', text: 'Move from planning to execution with task checklists, guest CSV, plan JSON, and calendar ICS exports.', accent: 'from-emerald-400 to-teal-500' },
+  { title: 'Multilingual output', text: 'With Gemini configured, generate event plans in English, Hindi or Marathi. Demo mode uses sample suggestions.', accent: 'from-cyan-400 to-blue-500' },
   { title: 'Demo-ready mode', text: 'Try the planner immediately without an API key and move faster in hackathon mode.', accent: 'from-fuchsia-500 to-violet-500' }
 ];
 

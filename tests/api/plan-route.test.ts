@@ -47,4 +47,16 @@ describe('plan API route', () => {
     const response = await createPlan(request);
     expect(response.status).toBe(400);
   });
+
+  it('returns 400 for malformed JSON', async () => {
+    const request = new NextRequest('http://localhost/api/plan', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: '{invalid'
+    });
+
+    const response = await createPlan(request);
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toEqual({ error: 'Invalid JSON' });
+  });
 });

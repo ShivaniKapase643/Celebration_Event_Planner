@@ -8,9 +8,11 @@ Celebrate AI turns an event brief into an editable celebration plan with a timel
 - Gemini generated plans through a server-only route, with schema validation and deterministic demo plans when no key is configured
 - INR budget allocations calculated in code and guaranteed to sum to the entered budget
 - Timeline task progress, budget overview, menu and decor, invitation text, guests, RSVP tracking, and backup suggestions
-- English, Hindi, and Marathi plan output
+- Gemini prompted to generate English, Hindi, and Marathi plans when `GEMINI_API_KEY` is configured; demo mode uses bundled sample content
 - Local browser draft and plan persistence, light and dark themes, and ICS generation utilities
 - Responsive layout, keyboard focus styles, accessible toggle buttons, and reduced-motion support
+
+Exports include plan JSON, guest CSV, and calendar ICS. PDF export is not currently implemented.
 
 ## Run locally
 

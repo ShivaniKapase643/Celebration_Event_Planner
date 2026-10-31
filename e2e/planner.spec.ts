@@ -126,3 +126,13 @@ test('event templates prefill the form', async ({ page }) => {
   await expect(page.locator('#eventType')).toHaveValue('festival_party');
   await expect(page.locator('#title')).toHaveValue('Diwali family get-together');
 });
+
+test('landing page images load without horizontal overflow on mobile', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/');
+
+  await expect(page.getByRole('heading', { name: /plan joyful moments/i })).toBeVisible();
+  await expect.poll(() => page.locator('img').evaluateAll((images) => images.every((image) => image instanceof HTMLImageElement && image.complete && image.naturalWidth > 0))).toBe(true);
+  const widths = await page.evaluate(() => ({ viewport: window.innerWidth, document: document.documentElement.scrollWidth }));
+  expect(widths.document).toBeLessThanOrEqual(widths.viewport);
+});

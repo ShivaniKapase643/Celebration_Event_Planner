@@ -893,7 +893,7 @@ export default function PlannerPage() {
                         <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-rose-700"><p className="text-xs uppercase tracking-[0.2em]">No</p><p className="mt-2 text-2xl font-bold">{guestSummary.no}</p></div>
                       </div>
 
-                      <div className="mb-4 flex flex-wrap items-center gap-2" aria-label="Filter guests by RSVP">
+                      <div className="mb-4 flex flex-wrap items-center gap-2" role="group" aria-label="Filter guests by RSVP">
                         {(['all', 'yes', 'maybe', 'no'] as const).map((status) => <Button key={status} type="button" size="sm" variant={guestFilter === status ? 'primary' : 'secondary'} aria-pressed={guestFilter === status} onClick={() => setGuestFilter(status)}>{status === 'all' ? 'All guests' : status}</Button>)}
                       </div>
 

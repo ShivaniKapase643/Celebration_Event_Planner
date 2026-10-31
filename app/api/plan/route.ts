@@ -52,6 +52,9 @@ export async function POST(request: NextRequest) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: 'Validation failed' }, { status: 400 });
     }
+    if (error instanceof SyntaxError) {
+      return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
+    }
 
     return NextResponse.json({ error: 'Unable to generate plan right now' }, { status: 500 });
   }
