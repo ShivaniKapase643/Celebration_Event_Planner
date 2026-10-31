@@ -7,6 +7,7 @@ import { Badge, Button, Card, CardContent, Checkbox, ChipToggle, EmptyState, Inp
 import { eventInputSchema, eventPlanSchema } from '@/lib/validation/schemas';
 import { calculateBudgetBreakdown } from '@/lib/budget/allocation';
 import { buildIcsFile } from '@/lib/ics/generator';
+import { escapeGuestCsvCell, restoreGuestCsvCell } from '@/lib/csv/guests';
 
 
 const futureDate = (offset = 30) => {
@@ -457,7 +458,7 @@ export default function PlannerPage() {
   };
 
   const exportGuests = () => {
-    const csv = ['name,rsvp', ...guests.map((guest) => `"${guest.name.replace(/"/g, '""')}",${guest.rsvp}`)].join('\r\n');
+    const csv = ['name,rsvp', ...guests.map((guest) => `${escapeGuestCsvCell(guest.name)},${guest.rsvp}`)].join('\r\n');
     downloadFile('celebrate-ai-guests.csv', `\uFEFF${csv}`, 'text/csv;charset=utf-8');
     setToast('Guest list exported as CSV');
   };
@@ -471,7 +472,7 @@ export default function PlannerPage() {
       const match = row.match(/^\s*(?:"((?:""|[^"])*)"|([^,]*))\s*(?:,\s*([^,]*))?/);
       const rawName = match?.[1]?.replace(/""/g, '"') ?? match?.[2] ?? '';
       const rawRsvp = match?.[3] ?? '';
-      const name = rawName.trim().slice(0, 100);
+      const name = restoreGuestCsvCell(rawName).trim().slice(0, 100);
       const rsvp = (['yes', 'no', 'maybe'].includes(rawRsvp.trim().toLowerCase()) ? rawRsvp.trim().toLowerCase() : 'maybe') as RSVPStatus;
       return { id: crypto.randomUUID(), name, rsvp };
     }).filter((guest) => guest.name);
