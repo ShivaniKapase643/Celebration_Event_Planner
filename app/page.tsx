@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { ThemeToggle } from '@/components/ui';
 
 export const dynamic = 'force-dynamic';
@@ -70,6 +71,18 @@ export default function HomePage() {
           </div>
 
           <div className="rounded-[2rem] border border-border bg-card p-4 shadow-soft md:p-6">
+            <div className="relative mb-4 h-48 overflow-hidden rounded-[1.5rem] bg-rose-50 sm:h-60">
+              <Image
+                src="/images/elegant-celebration.png"
+                alt="An elegant outdoor celebration dinner with floral arrangements and warm lights"
+                fill
+                priority
+                sizes="(max-width: 1024px) 100vw, 45vw"
+                className="object-cover object-center"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/60 via-transparent to-transparent" aria-hidden="true" />
+              <p className="absolute bottom-4 left-4 rounded-full border border-white/60 bg-white/90 px-3 py-1.5 text-sm font-semibold text-slate-800 shadow-sm backdrop-blur">A little celebration inspiration</p>
+            </div>
             <div className="rounded-[1.5rem] bg-slate-950 p-5 text-slate-50 dark:bg-slate-900">
               <div className="mb-4 flex items-center justify-between text-xs uppercase tracking-[0.25em] text-violet-200">
                 <span>Event brief</span>
@@ -103,6 +116,20 @@ export default function HomePage() {
               <p className="mt-3 text-sm leading-6 text-muted-foreground">{feature.text}</p>
             </article>
           ))}
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-7xl px-4 py-8 md:px-6" aria-label="Garden celebration inspiration">
+        <div className="relative isolate min-h-44 overflow-hidden rounded-[2rem] border border-rose-100 bg-rose-50 shadow-sm sm:min-h-56">
+          <Image
+            src="/images/celebration-hero.png"
+            alt="Pastel garden celebration inspiration with leafy details and a candlelit reception"
+            fill
+            sizes="(max-width: 1280px) 100vw, 1280px"
+            className="object-cover object-center"
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-white/25 via-transparent to-transparent" aria-hidden="true" />
+          <p className="absolute bottom-4 left-4 rounded-full border border-white/70 bg-white/90 px-4 py-2 text-sm font-semibold text-slate-800 shadow-sm backdrop-blur sm:bottom-6 sm:left-6">A warm sunset garden, made yours</p>
         </div>
       </section>
 
