@@ -9,6 +9,7 @@ Celebrate AI turns an event brief into an editable celebration plan with a timel
 - INR budget allocations calculated in code and guaranteed to sum to the entered budget
 - Timeline task progress, budget overview, menu and decor, invitation text, guests, RSVP tracking, and backup suggestions
 - Gemini prompted to generate English, Hindi, and Marathi plans when `GEMINI_API_KEY` is configured; demo mode uses bundled sample content
+- Section “Sample ideas” controls load bundled content locally; they do not make Gemini requests
 - Local browser draft and plan persistence, light and dark themes, and ICS generation utilities
 - Responsive layout, keyboard focus styles, accessible toggle buttons, and reduced-motion support
 

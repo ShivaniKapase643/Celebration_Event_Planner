@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from 'zod/v3';
 
 export const dietaryNeedsEnum = ['vegetarian', 'vegan', 'jain', 'halal', 'gluten_free', 'none'] as const;
 export const eventTypeEnum = ['birthday', 'wedding', 'anniversary', 'baby_shower', 'housewarming', 'graduation', 'festival_party', 'corporate', 'farewell', 'custom'] as const;

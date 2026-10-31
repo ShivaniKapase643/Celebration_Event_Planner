@@ -245,12 +245,13 @@ export default function PlannerPage() {
   const [savedStatus, setSavedStatus] = useState('Saved');
   const [actualCosts, setActualCosts] = useState<Record<string, number>>({});
   const [taskTitle, setTaskTitle] = useState('');
-  const [isDemoMode, setIsDemoMode] = useState(true);
+  const [isDemoMode, setIsDemoMode] = useState<boolean | null>(null);
   const [guestFilter, setGuestFilter] = useState<'all' | RSVPStatus>('all');
   const [actualCostsPlanId, setActualCostsPlanId] = useState<string | null>(null);
 
   useEffect(() => {
     const savedPlan = window.localStorage.getItem('celebrate-ai-plan');
+    const savedPlanSource = window.localStorage.getItem('celebrate-ai-plan-source');
     const savedForm = window.localStorage.getItem('celebrate-ai-form');
     const savedList = window.localStorage.getItem('celebrate-ai-events');
     const savedGuests = window.localStorage.getItem('celebrate-ai-guests');
@@ -258,9 +259,15 @@ export default function PlannerPage() {
 
     if (savedPlan) {
       try {
-        setPlan(JSON.parse(savedPlan));
+        const restoredPlan = JSON.parse(savedPlan) as EventPlan;
+        setPlan(restoredPlan);
+        if (savedPlanSource) {
+          const source = JSON.parse(savedPlanSource) as { planId?: string; demoMode?: boolean };
+          setIsDemoMode(source.planId === restoredPlan.planId && typeof source.demoMode === 'boolean' ? source.demoMode : null);
+        }
       } catch {
         setPlan(null);
+        setIsDemoMode(null);
       }
     }
 
@@ -400,6 +407,7 @@ export default function PlannerPage() {
       const generatedPlan = validatedPlan.data;
       setPlan(generatedPlan);
       setIsDemoMode(Boolean(data.demoMode));
+      window.localStorage.setItem('celebrate-ai-plan-source', JSON.stringify({ planId: generatedPlan.planId, demoMode: Boolean(data.demoMode) }));
       if (actualCostsPlanId !== generatedPlan.planId) { setActualCosts({}); setActualCostsPlanId(generatedPlan.planId); }
       setToast(data.demoMode ? 'Demo plan generated' : 'Plan generated');
     } catch (submissionError) {
@@ -480,7 +488,7 @@ export default function PlannerPage() {
       const refreshed = buildDemoPlan({ ...form, title: current.title, date: current.date });
       return { ...current, sections: { ...current.sections, [section]: refreshed.sections[section] } };
     });
-    setToast('Section refreshed with updated suggestions');
+    setToast('Loaded bundled sample suggestions for this section');
   };
 
   const copyToClipboard = async (text: string, successLabel: string) => {
@@ -524,7 +532,7 @@ export default function PlannerPage() {
             </div>
 
             <div className="flex items-center gap-3">
-              <Badge className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-300">{isDemoMode ? 'Demo suggestions' : 'AI generated'}</Badge>
+              <Badge className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-300">{isDemoMode === null ? 'Saved plan · source unknown' : isDemoMode ? 'Demo suggestions' : 'AI generated'}</Badge>
               <ThemeToggle />
             </div>
           </div>
@@ -737,7 +745,7 @@ export default function PlannerPage() {
                     <CardContent className="p-5">
                       <div className="mb-4 flex items-center justify-between">
                         <h3 className="text-xl font-semibold">Timeline & Tasks</h3>
-                        <Button type="button" variant="secondary" size="sm" onClick={() => regenerateSection('timeline')} aria-label="Regenerate timeline">↻ Regenerate</Button>
+                        <Button type="button" variant="secondary" size="sm" onClick={() => regenerateSection('timeline')} aria-label="Load sample timeline suggestions">Sample ideas</Button>
                       </div>
                       <div className="mb-4 flex gap-2"><Input aria-label="New task" placeholder="Add a task" value={taskTitle} onChange={(e) => setTaskTitle(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addTask(); } }} /><Button type="button" variant="secondary" onClick={addTask}>Add task</Button></div>
                       <div className="space-y-3">
@@ -784,7 +792,7 @@ export default function PlannerPage() {
                       <CardContent className="p-5">
                         <div className="mb-4 flex items-center justify-between">
                           <h3 className="text-xl font-semibold">Category table</h3>
-                          <Button type="button" variant="secondary" size="sm" onClick={() => regenerateSection('budget')} aria-label="Regenerate budget plan">↻ Regenerate</Button>
+                          <Button type="button" variant="secondary" size="sm" onClick={() => regenerateSection('budget')} aria-label="Load sample budget suggestions">Sample ideas</Button>
                         </div>
                         <div className="overflow-x-auto">
                           <table className="min-w-full text-left text-sm">
@@ -820,7 +828,7 @@ export default function PlannerPage() {
                       <CardContent className="p-5">
                         <div className="mb-4 flex items-center justify-between">
                           <h3 className="text-xl font-semibold">Menu</h3>
-                          <Button type="button" variant="secondary" size="sm" onClick={() => regenerateSection('menu')} aria-label="Regenerate menu">↻ Regenerate</Button>
+                          <Button type="button" variant="secondary" size="sm" onClick={() => regenerateSection('menu')} aria-label="Load sample menu suggestions">Sample ideas</Button>
                         </div>
                         {['Starters', 'Mains', 'Desserts', 'Drinks'].map((section) => (
                           <div key={section} className="mb-4">
@@ -838,7 +846,7 @@ export default function PlannerPage() {
                       <CardContent className="p-5">
                         <div className="mb-4 flex items-center justify-between">
                           <h3 className="text-xl font-semibold">Decor</h3>
-                          <Button type="button" variant="secondary" size="sm" onClick={() => regenerateSection('decor')} aria-label="Regenerate decor">↻ Regenerate</Button>
+                          <Button type="button" variant="secondary" size="sm" onClick={() => regenerateSection('decor')} aria-label="Load sample decor suggestions">Sample ideas</Button>
                         </div>
                         <div className="space-y-2">
                           {plan.sections.decor.map((item) => <div key={item} className="rounded-xl border border-border bg-muted/50 px-3 py-2 text-sm">{item}</div>)}
@@ -853,7 +861,7 @@ export default function PlannerPage() {
                     <CardContent className="p-5">
                       <div className="mb-4 flex items-center justify-between">
                         <h3 className="text-xl font-semibold">Invitation & Speech</h3>
-                        <Button type="button" variant="secondary" size="sm" onClick={() => regenerateSection('invitation')} aria-label="Regenerate invitation content">↻ Regenerate</Button>
+                        <Button type="button" variant="secondary" size="sm" onClick={() => regenerateSection('invitation')} aria-label="Load sample invitation suggestions">Sample ideas</Button>
                       </div>
                       <div className="space-y-4">
                         <div className="rounded-2xl border border-border bg-muted/50 p-4">
@@ -941,7 +949,7 @@ export default function PlannerPage() {
                     <CardContent className="p-5">
                       <div className="mb-4 flex items-center justify-between">
                         <h3 className="text-xl font-semibold">Backup plan</h3>
-                        <Button type="button" variant="secondary" size="sm" onClick={() => regenerateSection('contingency')} aria-label="Regenerate backup plan">↻ Regenerate</Button>
+                        <Button type="button" variant="secondary" size="sm" onClick={() => regenerateSection('contingency')} aria-label="Load sample backup suggestions">Sample ideas</Button>
                       </div>
                       <ul className="space-y-3">
                         {plan.sections.contingency.map((item) => (

@@ -1,13 +1,15 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { ThemeToggle } from '@/components/ui';
+import gardenReception from '../images/Dreamy Pastel Garden Reception.png';
+import weddingReception from '../images/Dreamy Wedding Reception with Floral Lights.png';
 
 export const dynamic = 'force-dynamic';
 
 const features = [
-  { title: 'AI plan builder', text: 'Turn a short event brief into a structured plan with timeline, budget and backup ideas.', accent: 'from-violet-500 to-indigo-500' },
+  { title: 'AI plan builder', text: 'With Gemini configured, turn an event brief into a plan draft. Without a key, the planner uses bundled demo content.', accent: 'from-violet-500 to-indigo-500' },
   { title: 'Budget clarity', text: 'Track spend across venue, food, decor and staffing without losing control of the budget.', accent: 'from-amber-400 to-orange-500' },
-  { title: 'Guest RSVP flow', text: 'Keep chatty family lists organized with yes/maybe/no tracking and live confirmations.', accent: 'from-rose-400 to-pink-500' },
+  { title: 'Guest RSVP flow', text: 'Keep a local guest list organized with yes/maybe/no RSVP tracking.', accent: 'from-rose-400 to-pink-500' },
   { title: 'Checklist + exports', text: 'Move from planning to execution with task checklists, guest CSV, plan JSON, and calendar ICS exports.', accent: 'from-emerald-400 to-teal-500' },
   { title: 'Multilingual output', text: 'With Gemini configured, generate event plans in English, Hindi or Marathi. Demo mode uses sample suggestions.', accent: 'from-cyan-400 to-blue-500' },
   { title: 'Demo-ready mode', text: 'Try the planner immediately without an API key and move faster in hackathon mode.', accent: 'from-fuchsia-500 to-violet-500' }
@@ -15,7 +17,7 @@ const features = [
 
 const steps = [
   ['1', 'Share the brief', 'Tell us the date, budget, city, guest count and vibe.'],
-  ['2', 'Generate the plan', 'AI builds the event summary, tasks, menu and guest coordination.'],
+  ['2', 'Generate the plan', 'Gemini can draft the plan when configured; demo mode uses sample content. You manage its tasks, budget and guest RSVPs.'],
   ['3', 'Execute with confidence', 'Track RSVPs, tasks and budget with a polished event dashboard.']
 ];
 
@@ -73,7 +75,7 @@ export default function HomePage() {
           <div className="rounded-[2rem] border border-border bg-card p-4 shadow-soft md:p-6">
             <div className="relative mb-4 h-48 overflow-hidden rounded-[1.5rem] bg-rose-50 sm:h-60">
               <Image
-                src="/images/elegant-celebration.png"
+                src={weddingReception}
                 alt="An elegant outdoor celebration dinner with floral arrangements and warm lights"
                 fill
                 priority
@@ -86,7 +88,7 @@ export default function HomePage() {
             <div className="rounded-[1.5rem] bg-slate-950 p-5 text-slate-50 dark:bg-slate-900">
               <div className="mb-4 flex items-center justify-between text-xs uppercase tracking-[0.25em] text-violet-200">
                 <span>Event brief</span>
-                <span className="rounded-full bg-emerald-500/15 px-2 py-1 font-semibold text-emerald-300">Demo mode</span>
+                <span className="rounded-full bg-emerald-500/15 px-2 py-1 font-semibold text-emerald-300">Example plan</span>
               </div>
               <p className="text-base leading-7 text-slate-200">
                 “Plan my parents’ 25th anniversary for 60 guests in Pune with a warm, elegant theme, vegetarian menu and a budget of ₹2 lakh.”
@@ -122,7 +124,7 @@ export default function HomePage() {
       <section className="mx-auto max-w-7xl px-4 py-8 md:px-6" aria-label="Garden celebration inspiration">
         <div className="relative isolate min-h-44 overflow-hidden rounded-[2rem] border border-rose-100 bg-rose-50 shadow-sm sm:min-h-56">
           <Image
-            src="/images/celebration-hero.png"
+            src={gardenReception}
             alt="Pastel garden celebration inspiration with leafy details and a candlelit reception"
             fill
             sizes="(max-width: 1280px) 100vw, 1280px"
