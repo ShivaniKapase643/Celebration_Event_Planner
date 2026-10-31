@@ -1,0 +1,87 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: 210 40% 98%;
+  --foreground: 224 47% 18%;
+  --card: 0 0% 100%;
+  --card-foreground: 224 47% 18%;
+  --primary: 262 83% 58%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 248 80% 95%;
+  --secondary-foreground: 259 86% 28%;
+  --muted: 220 14% 96%;
+  --muted-foreground: 215 16% 47%;
+  --border: 220 13% 91%;
+  --input: 220 13% 91%;
+  --ring: 262 83% 58%;
+  --accent: 35 95% 59%;
+  --accent-foreground: 28 50% 12%;
+  --success: 142 72% 35%;
+  --warning: 32 95% 56%;
+  --danger: 348 83% 47%;
+  --font-sans: 'Inter', sans-serif;
+  --font-display: 'Georgia', serif;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+html.dark {
+  --background: 222 47% 11%;
+  --foreground: 210 40% 98%;
+  --card: 222 47% 16%;
+  --card-foreground: 210 40% 98%;
+  --primary: 262 83% 66%;
+  --primary-foreground: 224 47% 18%;
+  --secondary: 222 47% 18%;
+  --secondary-foreground: 210 40% 98%;
+  --muted: 217 25% 22%;
+  --muted-foreground: 215 20% 72%;
+  --border: 217 19% 27%;
+  --input: 217 19% 27%;
+}
+
+body {
+  color: hsl(var(--foreground));
+  background:
+    radial-gradient(circle at top left, rgba(167, 139, 250, 0.18), transparent 24%),
+    radial-gradient(circle at bottom right, rgba(251, 191, 36, 0.14), transparent 18%),
+    hsl(var(--background));
+  min-height: 100vh;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+button, input, select, textarea {
+  border-radius: 0.875rem;
+}
+
+::selection {
+  background: rgba(124, 58, 237, 0.2);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+:focus-visible {
+  outline: 3px solid rgba(124, 58, 237, 0.6);
+  outline-offset: 2px;
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
