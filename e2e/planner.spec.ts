@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { readFile } from 'node:fs/promises';
 
 test('landing page has styled CTA and planner route works', async ({ page }) => {
   await page.goto('/');
@@ -135,4 +136,37 @@ test('landing page images load without horizontal overflow on mobile', async ({ 
   await expect.poll(() => page.locator('img').evaluateAll((images) => images.every((image) => image instanceof HTMLImageElement && image.complete && image.naturalWidth > 0))).toBe(true);
   const widths = await page.evaluate(() => ({ viewport: window.innerWidth, document: document.documentElement.scrollWidth }));
   expect(widths.document).toBeLessThanOrEqual(widths.viewport);
+});
+
+test('guest CSV export neutralizes formulas and import restores the guest name', async ({ page }) => {
+  await page.addInitScript(() => localStorage.clear());
+  await page.goto('/planner');
+  await page.locator('#title').fill('CSV safety celebration');
+  await page.getByRole('button', { name: 'Generate my event plan' }).click();
+  await page.getByRole('tab', { name: /guests/i }).click();
+  await page.getByPlaceholder('Guest name').fill('=1+1');
+  await page.getByRole('button', { name: /add guest/i }).click();
+
+  const downloadPromise = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Export CSV' }).click();
+  const download = await downloadPromise;
+  const downloadPath = await download.path();
+  expect(downloadPath).not.toBeNull();
+  const csv = await readFile(downloadPath!, 'utf8');
+  expect(csv).toContain('"\'=1+1",');
+
+  await page.locator('input[type="file"][accept*=".csv"]').setInputFiles(downloadPath!);
+  await expect(page.getByRole('cell', { name: '=1+1' }).first()).toBeVisible();
+});
+
+test('section refresh identifies the demo fallback when Gemini is unconfigured', async ({ page }) => {
+  await page.addInitScript(() => localStorage.clear());
+  await page.goto('/planner');
+  await page.locator('#title').fill('Section refresh celebration');
+  await page.getByRole('button', { name: 'Generate my event plan' }).click();
+  await page.getByRole('tab', { name: /timeline/i }).click();
+  await page.getByRole('button', { name: /generate timeline with gemini/i }).click();
+
+  await expect(page.getByText('Gemini is not configured. Use Sample ideas for bundled suggestions.')).toBeVisible();
+  await expect(page.getByRole('button', { name: /load sample timeline suggestions/i })).toBeVisible();
 });

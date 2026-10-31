@@ -1,21 +1,14 @@
 "use client";
 
 import Link from 'next/link';
+import { buildDemoPlan } from '@/lib/planner/demo-plan';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { EventInput, EventPlan, GuestEntry, OutputLanguage, RSVPStatus } from '@/types';
+import type { EventInput, EventPlan, GeminiSectionKey, GuestEntry, OutputLanguage, PlanSectionKey, RSVPStatus } from '@/types';
 import { Badge, Button, Card, CardContent, Checkbox, ChipToggle, EmptyState, Input, ProgressBar, Select, Tabs, Textarea, ThemeToggle, ToastViewport } from '@/components/ui';
 import { eventInputSchema, eventPlanSchema } from '@/lib/validation/schemas';
-import { calculateBudgetBreakdown } from '@/lib/budget/allocation';
 import { buildIcsFile } from '@/lib/ics/generator';
 import { escapeGuestCsvCell, restoreGuestCsvCell } from '@/lib/csv/guests';
-
-
-const futureDate = (offset = 30) => {
-  const d = new Date();
-  d.setDate(d.getDate() + offset);
-  const local = new Date(d.getTime() - d.getTimezoneOffset() * 60_000);
-  return local.toISOString().slice(0, 10);
-};
+import { futureDateInput } from '@/lib/dates/input-date';
 
 const isTodayOrFuture = (value: string) => {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
@@ -38,7 +31,7 @@ function normalizeDietaryNeeds(value: unknown): EventInput['dietaryNeeds'] {
 const emptyForm: EventInput = {
   eventType: 'birthday',
   title: '',
-  date: futureDate(),
+  date: futureDateInput(),
   guestCount: 60,
   budget: 200000,
   city: 'Pune',
@@ -51,138 +44,6 @@ const emptyForm: EventInput = {
   description: 'Plan a joyful celebration with warm lights, great food and smooth guest flow.'
 };
 
-const demoPlans: Record<OutputLanguage, EventPlan> = {
-  en: {
-    planId: 'demo-en',
-    eventType: 'birthday',
-    title: 'Sunset Birthday Bash',
-    date: futureDate(42),
-    guestCount: 60,
-    budget: 200000,
-    city: 'Pune',
-    theme: 'Warm sunset garden',
-    dietaryNeeds: ['vegetarian', 'gluten_free'],
-    accessibilityNeeds: 'Ramp access and quiet seating area',
-    language: 'en',
-    summary: 'A warm, vibrant celebration with a sunset garden vibe and a relaxed guest flow.',
-    createdAt: new Date().toISOString(),
-    sections: {
-      timeline: [
-        { id: 't1', title: 'Book venue', deadline: 'T-30 days', priority: 'high', category: 'Venue', done: false },
-        { id: 't2', title: 'Confirm menu', deadline: 'T-21 days', priority: 'high', category: 'Food', done: true },
-        { id: 't3', title: 'Send invitations', deadline: 'T-12 days', priority: 'medium', category: 'Guest outreach', done: false },
-        { id: 't4', title: 'Decor final check', deadline: 'T-3 days', priority: 'medium', category: 'Decor', done: false }
-      ],
-      budget: {
-        venue: { amount: 68000, percent: 34 },
-        food: { amount: 56000, percent: 28 },
-        decor: { amount: 36000, percent: 18 },
-        entertainment: { amount: 22000, percent: 11 },
-        photography: { amount: 12000, percent: 6 },
-        miscellaneous: { amount: 6000, percent: 3 }
-      },
-      menu: {
-        starters: ['Paneer tikka skewers', 'Crispy corn cups'],
-        mains: ['Vegetable biryani', 'Paneer makhani', 'Dal tadka'],
-        desserts: ['Chocolate mousse cups', 'Fruit tartlets'],
-        drinks: ['Lemon mint cooler', 'Coconut water']
-      },
-      decor: ['Warm fairy lights', 'Floral centerpieces', 'Sunset palette backdrops'],
-      invitation: {
-        subject: 'You are invited to our sunset celebration',
-        body: 'Join us for an evening of music, food and joy on the 10th of June in Pune. We would love to celebrate with you.',
-        toast: 'Cheers to a memorable night full of laughter and love.'
-      },
-      contingency: ['Prepare indoor cover in case of rain', 'Keep a backup generator ready', 'Confirm vendor contacts 72 hours before the event']
-    }
-  },
-  hi: {
-    planId: 'demo-hi',
-    eventType: 'birthday',
-    title: 'सूरज-झिलमिलाता जन्मदिन',
-    date: futureDate(42),
-    guestCount: 60,
-    budget: 200000,
-    city: 'पुणे',
-    theme: 'गर्म सूर्यास्त उद्यान',
-    dietaryNeeds: ['vegetarian', 'gluten_free'],
-    accessibilityNeeds: 'रैंप एक्सेस और शांत बैठने की जगह',
-    language: 'hi',
-    summary: 'गर्मी भरे, सुंदर और आरामदायक उत्सव का आयोजन, जो सूर्यास्त वाली जगह को ध्यान में रखता है।',
-    createdAt: new Date().toISOString(),
-    sections: {
-      timeline: [
-        { id: 't1', title: 'वेनेउ बुक करें', deadline: 'T-30 days', priority: 'high', category: 'Venue', done: false },
-        { id: 't2', title: 'मेन्यू पुष्टि करें', deadline: 'T-21 days', priority: 'high', category: 'Food', done: true },
-        { id: 't3', title: 'निमंत्रण भेजें', deadline: 'T-12 days', priority: 'medium', category: 'Guest outreach', done: false }
-      ],
-      budget: {
-        venue: { amount: 68000, percent: 34 },
-        food: { amount: 56000, percent: 28 },
-        decor: { amount: 36000, percent: 18 },
-        entertainment: { amount: 22000, percent: 11 },
-        photography: { amount: 12000, percent: 6 },
-        miscellaneous: { amount: 6000, percent: 3 }
-      },
-      menu: {
-        starters: ['पनीर टिक्का स्क्यूअर्स', 'क्रिस्पी कॉर्न कप्स'],
-        mains: ['सब्ज़ी बिरयानी', 'पनीर मखाना', 'दल तड़का'],
-        desserts: ['चॉकलेट मूस कप्स', 'फ्रूट टार्टलेट्स'],
-        drinks: ['नींबू पुदीना कुंजी', 'नारियल पानी']
-      },
-      decor: ['गर्म फेयरलाइट्स', 'फूलों की सेंटरपीस', 'सूर्यास्त रंग योजना'],
-      invitation: {
-        subject: 'आपको हमारे उत्सव में आमंत्रित किया जा रहा है',
-        body: 'आइए हम साथ मिलकर 10 जून को पुणे में संगीत, भोजन और खुशी का आनंद लें।',
-        toast: 'हँसी, प्यार और यादों की रात के लिए जयकारा।'
-      },
-      contingency: ['बारिश के लिए अंदर की व्यवस्था रखें', '72 घंटे पहले विक्रेता संपर्क सुनिश्चित करें', 'बैकअप जनरेटर तैयार रखें']
-    }
-  },
-  mr: {
-    planId: 'demo-mr',
-    eventType: 'birthday',
-    title: 'सूर्यास्त जन्मदिन साजरा',
-    date: futureDate(42),
-    guestCount: 60,
-    budget: 200000,
-    city: 'पुणे',
-    theme: 'उष्ण सूर्यास्त बगीचा',
-    dietaryNeeds: ['vegetarian', 'gluten_free'],
-    accessibilityNeeds: 'रॅम्प प्रवेश आणि शांत बसण्याची जागा',
-    language: 'mr',
-    summary: 'सूर्यास्ताच्या रंगात भरलेले, नाजूक आणि आरामदायी उत्सव, ज्यात सर्वजण सहज सहभागी होऊ शकतात.',
-    createdAt: new Date().toISOString(),
-    sections: {
-      timeline: [
-        { id: 't1', title: 'वेनेउ बुक करा', deadline: 'T-30 days', priority: 'high', category: 'Venue', done: false },
-        { id: 't2', title: 'मेन्यूची पुष्टी करा', deadline: 'T-21 days', priority: 'high', category: 'Food', done: true },
-        { id: 't3', title: 'निमंत्रणे पाठवा', deadline: 'T-12 days', priority: 'medium', category: 'Guest outreach', done: false }
-      ],
-      budget: {
-        venue: { amount: 68000, percent: 34 },
-        food: { amount: 56000, percent: 28 },
-        decor: { amount: 36000, percent: 18 },
-        entertainment: { amount: 22000, percent: 11 },
-        photography: { amount: 12000, percent: 6 },
-        miscellaneous: { amount: 6000, percent: 3 }
-      },
-      menu: {
-        starters: ['पनीर टिक्का स्क्वेअर्स', 'क्रिस्पी कॉर्न कप्स'],
-        mains: ['भाजी बिर्याणी', 'पनीर मखाना', 'दल तडका'],
-        desserts: ['चॉकलेट मूस कप्स', 'फ्रूट टार्टलेट्स'],
-        drinks: ['लिंबू पुदीनाई लेमोनेड', 'नारळ पाणी']
-      },
-      decor: ['उष्ण फेअरलाइट्स', 'फुलांचे सेंटरपीस', 'सूर्यास्त रंग योजना'],
-      invitation: {
-        subject: 'आपल्याला आमच्या उत्सवासाठी आमंत्रित केले आहे',
-        body: 'आम्ही 10 जून रोजी पुण्यात संगीत, जेवण आणि आनंदाचा सोहळा साजरा करत आहोत. आपण यामध्ये सहभागी व्हा.',
-        toast: 'हास्य, प्रेम आणि सुंदर आठवणींच्या नात्याने आनंदी रात.'
-      },
-      contingency: ['पावसासाठी अंतर्गत व्यवस्था ठेवा', '72 तास आधी विक्रेता संपर्क निश्चित करा', 'बॅकअप जनरेटर सज्ज ठेवा']
-    }
-  }
-};
 
 const defaultGuests: GuestEntry[] = [
   { id: 'g1', name: 'Aisha', rsvp: 'yes' },
@@ -207,29 +68,46 @@ const tabList = [
   { value: 'backup', label: 'Backup Plan' }
 ];
 
+const sectionLabels: Record<PlanSectionKey, string> = {
+  timeline: 'timeline',
+  budget: 'budget',
+  menu: 'menu',
+  decor: 'decor',
+  invitation: 'invitation',
+  contingency: 'backup plan'
+};
+
+function SectionIdeaActions({
+  section,
+  isGenerating,
+  isBusy,
+  onSample,
+  onGemini
+}: {
+  section: PlanSectionKey;
+  isGenerating: boolean;
+  isBusy: boolean;
+  onSample: () => void;
+  onGemini: () => void;
+}) {
+  return (
+    <div className="flex flex-wrap gap-2">
+      <Button type="button" variant="secondary" size="sm" onClick={onSample} aria-label={`Load sample ${sectionLabels[section]} suggestions`}>Sample ideas</Button>
+      {section === 'budget' ? (
+        <p className="self-center text-xs text-muted-foreground">Budget split is calculated to match your total.</p>
+      ) : (
+        <Button type="button" variant="secondary" size="sm" onClick={onGemini} disabled={isBusy} aria-label={`Generate ${sectionLabels[section as GeminiSectionKey]} with Gemini`}>
+          {isGenerating ? 'Generating…' : 'Ask Gemini'}
+        </Button>
+      )}
+    </div>
+  );
+}
+
 function formatCurrency(value: number) {
   return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(value);
 }
 
-function buildDemoPlan(input: EventInput): EventPlan {
-  const base = demoPlans[input.language] ?? demoPlans.en;
-  return {
-    ...base,
-    title: input.title || base.title,
-    date: input.date || base.date,
-    city: input.city || base.city,
-    budget: input.budget || base.budget,
-    guestCount: input.guestCount || base.guestCount,
-    theme: input.theme || base.theme,
-    dietaryNeeds: input.dietaryNeeds.length ? input.dietaryNeeds : base.dietaryNeeds,
-    accessibilityNeeds: input.accessibilityNeeds || base.accessibilityNeeds,
-    sections: { ...base.sections, budget: calculateBudgetBreakdown(input.budget) },
-    eventTime: input.eventTime ?? '18:00',
-    venueType: input.venueType ?? 'outdoor',
-    summary: `A polished ${input.eventType} plan tailored for ${input.city || 'your city'} with a ${input.theme || 'warm atmosphere'} experience.`,
-    createdAt: new Date().toISOString()
-  };
-}
 
 export default function PlannerPage() {
   const [form, setForm] = useState<EventInput>(emptyForm);
@@ -247,6 +125,7 @@ export default function PlannerPage() {
   const [actualCosts, setActualCosts] = useState<Record<string, number>>({});
   const [taskTitle, setTaskTitle] = useState('');
   const [isDemoMode, setIsDemoMode] = useState<boolean | null>(null);
+  const [generatingSection, setGeneratingSection] = useState<GeminiSectionKey | null>(null);
   const [guestFilter, setGuestFilter] = useState<'all' | RSVPStatus>('all');
   const [actualCostsPlanId, setActualCostsPlanId] = useState<string | null>(null);
 
@@ -492,6 +371,49 @@ export default function PlannerPage() {
     setToast('Loaded bundled sample suggestions for this section');
   };
 
+  const generateSectionWithGemini = async (section: GeminiSectionKey) => {
+    if (!plan || generatingSection) return;
+    setGeneratingSection(section);
+    try {
+      const response = await fetch('/api/plan/section', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          ...form,
+          eventType: plan.eventType,
+          title: plan.title,
+          date: plan.date,
+          guestCount: plan.guestCount,
+          budget: plan.budget,
+          city: plan.city,
+          theme: plan.theme,
+          dietaryNeeds: plan.dietaryNeeds,
+          accessibilityNeeds: plan.accessibilityNeeds,
+          eventTime: plan.eventTime,
+          venueType: plan.venueType,
+          section
+        })
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error('Gemini request failed');
+      if (data.demoMode) {
+        setToast('Gemini is not configured. Use Sample ideas for bundled suggestions.');
+        return;
+      }
+      if (!data.section) throw new Error('Gemini response did not include this section');
+
+      setPlan((current) => current ? {
+        ...current,
+        sections: { ...current.sections, [section]: data.section }
+      } : current);
+      setToast(`Generated ${sectionLabels[section]} with Gemini`);
+    } catch {
+      setToast(`Could not generate ${sectionLabels[section]} with Gemini. Try again or use Sample ideas.`);
+    } finally {
+      setGeneratingSection(null);
+    }
+  };
+
   const copyToClipboard = async (text: string, successLabel: string) => {
     try {
       await navigator.clipboard.writeText(text);
@@ -546,7 +468,7 @@ export default function PlannerPage() {
                 <p className="text-xs font-semibold uppercase tracking-[0.24em] text-violet-600">Planner</p>
                 <h1 className="mt-2 text-2xl font-semibold">New event</h1>
               </div>
-              <Button type="button" variant="ghost" size="sm" onClick={() => { setForm({ ...emptyForm, date: futureDate() }); setError(''); setDateError(''); }}>Reset</Button>
+              <Button type="button" variant="ghost" size="sm" onClick={() => { setForm({ ...emptyForm, date: futureDateInput() }); setError(''); setDateError(''); }}>Reset</Button>
             </div>
 
             <form onSubmit={handleGenerate} className="space-y-4" aria-label="Event planner form">
@@ -746,7 +668,7 @@ export default function PlannerPage() {
                     <CardContent className="p-5">
                       <div className="mb-4 flex items-center justify-between">
                         <h3 className="text-xl font-semibold">Timeline & Tasks</h3>
-                        <Button type="button" variant="secondary" size="sm" onClick={() => regenerateSection('timeline')} aria-label="Load sample timeline suggestions">Sample ideas</Button>
+                        <SectionIdeaActions section="timeline" isGenerating={generatingSection === 'timeline'} isBusy={generatingSection !== null} onSample={() => regenerateSection('timeline')} onGemini={() => void generateSectionWithGemini('timeline')} />
                       </div>
                       <div className="mb-4 flex gap-2"><Input aria-label="New task" placeholder="Add a task" value={taskTitle} onChange={(e) => setTaskTitle(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addTask(); } }} /><Button type="button" variant="secondary" onClick={addTask}>Add task</Button></div>
                       <div className="space-y-3">
@@ -793,7 +715,7 @@ export default function PlannerPage() {
                       <CardContent className="p-5">
                         <div className="mb-4 flex items-center justify-between">
                           <h3 className="text-xl font-semibold">Category table</h3>
-                          <Button type="button" variant="secondary" size="sm" onClick={() => regenerateSection('budget')} aria-label="Load sample budget suggestions">Sample ideas</Button>
+                          <SectionIdeaActions section="budget" isGenerating={false} isBusy={generatingSection !== null} onSample={() => regenerateSection('budget')} onGemini={() => undefined} />
                         </div>
                         <div className="overflow-x-auto">
                           <table className="min-w-full text-left text-sm">
@@ -829,7 +751,7 @@ export default function PlannerPage() {
                       <CardContent className="p-5">
                         <div className="mb-4 flex items-center justify-between">
                           <h3 className="text-xl font-semibold">Menu</h3>
-                          <Button type="button" variant="secondary" size="sm" onClick={() => regenerateSection('menu')} aria-label="Load sample menu suggestions">Sample ideas</Button>
+                          <SectionIdeaActions section="menu" isGenerating={generatingSection === 'menu'} isBusy={generatingSection !== null} onSample={() => regenerateSection('menu')} onGemini={() => void generateSectionWithGemini('menu')} />
                         </div>
                         {['Starters', 'Mains', 'Desserts', 'Drinks'].map((section) => (
                           <div key={section} className="mb-4">
@@ -847,7 +769,7 @@ export default function PlannerPage() {
                       <CardContent className="p-5">
                         <div className="mb-4 flex items-center justify-between">
                           <h3 className="text-xl font-semibold">Decor</h3>
-                          <Button type="button" variant="secondary" size="sm" onClick={() => regenerateSection('decor')} aria-label="Load sample decor suggestions">Sample ideas</Button>
+                        <SectionIdeaActions section="decor" isGenerating={generatingSection === 'decor'} isBusy={generatingSection !== null} onSample={() => regenerateSection('decor')} onGemini={() => void generateSectionWithGemini('decor')} />
                         </div>
                         <div className="space-y-2">
                           {plan.sections.decor.map((item) => <div key={item} className="rounded-xl border border-border bg-muted/50 px-3 py-2 text-sm">{item}</div>)}
@@ -862,7 +784,7 @@ export default function PlannerPage() {
                     <CardContent className="p-5">
                       <div className="mb-4 flex items-center justify-between">
                         <h3 className="text-xl font-semibold">Invitation & Speech</h3>
-                        <Button type="button" variant="secondary" size="sm" onClick={() => regenerateSection('invitation')} aria-label="Load sample invitation suggestions">Sample ideas</Button>
+                        <SectionIdeaActions section="invitation" isGenerating={generatingSection === 'invitation'} isBusy={generatingSection !== null} onSample={() => regenerateSection('invitation')} onGemini={() => void generateSectionWithGemini('invitation')} />
                       </div>
                       <div className="space-y-4">
                         <div className="rounded-2xl border border-border bg-muted/50 p-4">
@@ -950,7 +872,7 @@ export default function PlannerPage() {
                     <CardContent className="p-5">
                       <div className="mb-4 flex items-center justify-between">
                         <h3 className="text-xl font-semibold">Backup plan</h3>
-                        <Button type="button" variant="secondary" size="sm" onClick={() => regenerateSection('contingency')} aria-label="Load sample backup suggestions">Sample ideas</Button>
+                        <SectionIdeaActions section="contingency" isGenerating={generatingSection === 'contingency'} isBusy={generatingSection !== null} onSample={() => regenerateSection('contingency')} onGemini={() => void generateSectionWithGemini('contingency')} />
                       </div>
                       <ul className="space-y-3">
                         {plan.sections.contingency.map((item) => (

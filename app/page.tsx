@@ -7,7 +7,7 @@ import weddingReception from '../images/Dreamy Wedding Reception with Floral Lig
 export const dynamic = 'force-dynamic';
 
 const features = [
-  { title: 'AI plan builder', text: 'With Gemini configured, turn an event brief into a plan draft. Without a key, the planner uses bundled demo content.', accent: 'from-violet-500 to-indigo-500' },
+  { title: 'AI plan builder', text: 'With Gemini configured, turn an event brief into a plan draft and refresh timeline, menu, decor, invitation, or backup ideas. Without a key, sample content stays clearly in demo mode.', accent: 'from-violet-500 to-indigo-500' },
   { title: 'Budget clarity', text: 'Track spend across venue, food, decor and staffing without losing control of the budget.', accent: 'from-amber-400 to-orange-500' },
   { title: 'Guest RSVP flow', text: 'Keep a local guest list organized with yes/maybe/no RSVP tracking.', accent: 'from-rose-400 to-pink-500' },
   { title: 'Checklist + exports', text: 'Move from planning to execution with task checklists, guest CSV, plan JSON, and calendar ICS exports.', accent: 'from-emerald-400 to-teal-500' },

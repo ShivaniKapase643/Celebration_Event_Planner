@@ -16,6 +16,47 @@ describe('planner component', () => {
     expect(results.violations).toEqual([]);
   });
 
+  it('offers Gemini section generation without presenting demo fallback as AI output', async () => {
+    window.localStorage.setItem('celebrate-ai-plan', JSON.stringify(samplePlan));
+    const fetchMock = vi.spyOn(global, 'fetch').mockResolvedValue({
+      ok: true,
+      json: async () => ({ ok: true, demoMode: true })
+    } as Response);
+    render(<PlannerPage />);
+    fireEvent.click(await screen.findByRole('tab', { name: /timeline/i }));
+    fireEvent.click(screen.getByRole('button', { name: /generate timeline with gemini/i }));
+
+    expect(await screen.findByText(/Gemini is not configured/i)).toBeInTheDocument();
+    expect(fetchMock).toHaveBeenCalledWith('/api/plan/section', expect.objectContaining({ method: 'POST' }));
+    expect(screen.getByRole('button', { name: /load sample timeline suggestions/i })).toBeInTheDocument();
+    fetchMock.mockRestore();
+  });
+
+  it('applies a returned Gemini section to the editable plan', async () => {
+    window.localStorage.setItem('celebrate-ai-plan', JSON.stringify(samplePlan));
+    const fetchMock = vi.spyOn(global, 'fetch').mockResolvedValue({
+      ok: true,
+      json: async () => ({ ok: true, demoMode: false, section: { starters: ['Fresh mango chaat'], mains: ['Paneer pulao'], desserts: ['Kesar kulfi'], drinks: ['Nimbu pani'] } })
+    } as Response);
+    render(<PlannerPage />);
+    fireEvent.click(await screen.findByRole('tab', { name: /menu/i }));
+    fireEvent.click(screen.getByRole('button', { name: /generate menu with gemini/i }));
+
+    expect(await screen.findByText('Fresh mango chaat')).toBeInTheDocument();
+    expect(screen.getByText(/Generated menu with Gemini/i)).toBeInTheDocument();
+    expect(JSON.parse(String(fetchMock.mock.calls[0][1]?.body))).toMatchObject({ section: 'menu' });
+    fetchMock.mockRestore();
+  });
+
+  it('keeps budget allocation deterministic rather than labeling it as Gemini output', async () => {
+    window.localStorage.setItem('celebrate-ai-plan', JSON.stringify(samplePlan));
+    render(<PlannerPage />);
+    fireEvent.click(await screen.findByRole('tab', { name: /^budget$/i }));
+
+    expect(screen.getByText('Budget split is calculated to match your total.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /generate budget with gemini/i })).not.toBeInTheDocument();
+  });
+
   it('updates all dietary options and keeps none exclusive', async () => {
     render(<PlannerPage />);
     const vegetarian = screen.getByRole('button', { name: 'vegetarian' });

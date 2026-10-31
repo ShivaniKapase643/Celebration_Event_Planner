@@ -23,6 +23,8 @@ describe('AI client', () => {
 
     expect(result.demoMode).toBe(true);
     expect(result.plan.title).toBe('Demo Birthday');
+    expect(result.plan.eventType).toBe('birthday');
+    expect(result.plan.summary).toContain('Nashik');
     expect(Object.values(result.plan.sections.budget).reduce((total, item) => total + item.amount, 0)).toBe(80000);
     expect(result.plan.budget).toBe(80000);
   });
@@ -42,6 +44,8 @@ describe('AI client', () => {
     }, true);
 
     expect(result.demoMode).toBe(true);
+    expect(result.plan.eventType).toBe('festival_party');
+    expect(result.plan.summary).toContain('येथे');
     expect(result.plan.sections.budget.venue.amount).toBeGreaterThan(0);
   });
 });

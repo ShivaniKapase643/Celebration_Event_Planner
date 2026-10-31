@@ -1,6 +1,6 @@
 import { GoogleGenAI } from '@google/genai';
 import { eventPlanSchema } from '@/lib/validation/schemas';
-import { samplePlan } from '@/lib/ai/sample-plan';
+import { buildDemoPlan } from '@/lib/planner/demo-plan';
 import { calculateBudgetBreakdown } from '@/lib/budget/allocation';
 import type { EventInput, EventPlan } from '@/types';
 
@@ -31,24 +31,7 @@ export async function generatePlan(input: EventInput, forceDemo = false): Promis
   const budgetBreakdown = calculateBudgetBreakdown(input.budget);
   if (forceDemo || !process.env.GEMINI_API_KEY) {
     return {
-      plan: {
-        ...samplePlan,
-        date: input.date,
-        title: input.title,
-        city: input.city,
-        budget: input.budget,
-        guestCount: input.guestCount,
-        language: input.language,
-        eventTime: input.eventTime ?? '18:00',
-        venueType: input.venueType ?? 'outdoor',
-        eventType: input.eventType,
-        theme: input.theme,
-        dietaryNeeds: input.dietaryNeeds.length ? input.dietaryNeeds : samplePlan.dietaryNeeds,
-        sections: { ...samplePlan.sections, budget: budgetBreakdown },
-        accessibilityNeeds: input.accessibilityNeeds,
-        summary: input.language === 'hi' ? `${input.city} में ${input.theme} थीम के साथ ${input.eventType} के लिए ${input.guestCount} मेहमानों की योजना।` : input.language === 'mr' ? `${input.city} येथे ${input.theme} संकल्पनेनुसार ${input.eventType} साठी ${input.guestCount} पाहुण्यांचे नियोजन.` : `A ${input.eventType} plan for ${input.guestCount} guests in ${input.city}, designed around ${input.theme}.`,
-        createdAt: new Date().toISOString()
-      },
+      plan: buildDemoPlan(input),
       demoMode: true
     };
   }

@@ -5,11 +5,11 @@ Celebrate AI turns an event brief into an editable celebration plan with a timel
 ## Features
 
 - Birthday, wedding, anniversary, baby shower, festival, corporate, farewell, and custom event planning
-- Gemini generated plans through a server-only route, with schema validation and deterministic demo plans when no key is configured
+- Gemini-generated full plans and section refreshes through server-only routes, with schema validation and clearly identified demo plans when no key is configured
 - INR budget allocations calculated in code and guaranteed to sum to the entered budget
 - Timeline task progress, budget overview, menu and decor, invitation text, guests, RSVP tracking, and backup suggestions
-- Gemini prompted to generate English, Hindi, and Marathi plans when `GEMINI_API_KEY` is configured; demo mode uses bundled sample content
-- Section “Sample ideas” controls load bundled content locally; they do not make Gemini requests
+- Gemini is prompted to generate English, Hindi, and Marathi plans when `GEMINI_API_KEY` is configured; no-key demo plans use localized bundled samples and are labeled as demos
+- “Ask Gemini” refreshes the selected timeline, menu, decor, invitation, or backup section when configured; “Sample ideas” always loads bundled content locally. Budget splits stay deterministic so their amounts match the event total.
 - Local browser draft and plan persistence, light and dark themes, and ICS generation utilities
 - Responsive layout, keyboard focus styles, accessible toggle buttons, and reduced-motion support
 

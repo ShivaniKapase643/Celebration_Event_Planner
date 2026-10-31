@@ -71,6 +71,9 @@ export type PlanSection = {
   contingency: string[];
 };
 
+export type PlanSectionKey = keyof PlanSection;
+export type GeminiSectionKey = Exclude<PlanSectionKey, 'budget'>;
+
 export type EventPlan = {
   planId: string;
   eventType: EventType;

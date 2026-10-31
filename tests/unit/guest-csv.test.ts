@@ -23,4 +23,9 @@ describe('guest CSV cells', () => {
     expect(escaped).toBe('"Asha ""AJ"", Shah"');
     expect(restoreGuestCsvCell(escaped.slice(1, -1).replace(/""/g, '"'))).toBe(name);
   });
+
+  it('leaves ordinary names unchanged', () => {
+    expect(escapeGuestCsvCell('Nisha')).toBe('"Nisha"');
+    expect(restoreGuestCsvCell('Nisha')).toBe('Nisha');
+  });
 });

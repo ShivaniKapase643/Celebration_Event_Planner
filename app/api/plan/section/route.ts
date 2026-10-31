@@ -5,6 +5,9 @@ import { RateLimiter } from '@/lib/rate-limit';
 import { generatePlan } from '@/lib/ai/client';
 
 const rateLimiter = new RateLimiter(60_000, 10);
+const sectionSchema = z.object({
+  section: z.enum(['timeline', 'menu', 'decor', 'invitation', 'contingency'])
+});
 
 export async function POST(request: NextRequest) {
   const contentType = request.headers.get('content-type') ?? '';
@@ -28,10 +31,14 @@ export async function POST(request: NextRequest) {
     if (new TextEncoder().encode(raw).byteLength > 16_384) {
       return NextResponse.json({ error: 'Request is too large' }, { status: 413 });
     }
-    const body = JSON.parse(raw);
-    const data = eventInputSchema.parse(body);
-    const result = await generatePlan(data);
-    return NextResponse.json({ ok: true, ...result }, { status: 200 });
+    const body: unknown = JSON.parse(raw);
+    const { section } = sectionSchema.parse(body);
+    const input = eventInputSchema.parse(body);
+    const result = await generatePlan(input);
+    if (result.demoMode) {
+      return NextResponse.json({ ok: true, demoMode: true }, { status: 200 });
+    }
+    return NextResponse.json({ ok: true, demoMode: false, section: result.plan.sections[section] }, { status: 200 });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: 'Validation failed' }, { status: 400 });

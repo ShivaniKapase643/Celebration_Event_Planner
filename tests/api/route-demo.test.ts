@@ -45,6 +45,18 @@ beforeEach(() => {
 import { POST as createPlan } from '@/app/api/plan/route';
 import { POST as regeneratePlan } from '@/app/api/plan/section/route';
 
+function makeSectionRequest(section: string) {
+  return new NextRequest('http://localhost/api/plan/section', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      eventType: 'wedding', title: 'Garden wedding', date: '2036-05-15', guestCount: 120,
+      budget: 200000, city: 'Nagpur', theme: 'Royal', dietaryNeeds: ['vegetarian'],
+      accessibilityNeeds: '', language: 'en', section
+    })
+  });
+}
+
 describe('demo API route', () => {
   it('handles a valid plan request in demo mode', async () => {
     const request = new NextRequest('http://localhost/api/plan', {
@@ -91,5 +103,33 @@ describe('demo API route', () => {
     const response = await regeneratePlan(request);
     expect(response.status).toBe(400);
     await expect(response.json()).resolves.toEqual({ error: 'Invalid JSON' });
+  });
+
+  it('clearly reports demo mode instead of presenting sample content as Gemini output', async () => {
+    const response = await regeneratePlan(makeSectionRequest('menu'));
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({ ok: true, demoMode: true });
+  });
+
+  it('returns only the requested section for a Gemini-backed response', async () => {
+    mockGeneratePlan.mockResolvedValueOnce({
+      plan: { sections: { menu: { starters: ['Gemini starter'], mains: ['Gemini main'], desserts: ['Gemini dessert'], drinks: ['Gemini drink'] } } },
+      demoMode: false
+    });
+
+    const response = await regeneratePlan(makeSectionRequest('menu'));
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({
+      ok: true,
+      demoMode: false,
+      section: { starters: ['Gemini starter'], mains: ['Gemini main'], desserts: ['Gemini dessert'], drinks: ['Gemini drink'] }
+    });
+  });
+
+  it('rejects unsupported section names', async () => {
+    mockGeneratePlan.mockClear();
+    const response = await regeneratePlan(makeSectionRequest('guests'));
+    expect(response.status).toBe(400);
+    expect(mockGeneratePlan).not.toHaveBeenCalled();
   });
 });
